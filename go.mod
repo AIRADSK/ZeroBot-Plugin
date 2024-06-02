@@ -3,6 +3,7 @@ module github.com/FloatTech/ZeroBot-Plugin
 go 1.20
 
 require (
+	github.com/AIRADSK/Plugin v1.0.1
 	github.com/Baidu-AIP/golang-sdk v1.1.1
 	github.com/FloatTech/AnimeAPI v1.7.1-0.20240530072450-71c23d2f01f8
 	github.com/FloatTech/floatbox v0.0.0-20240505082030-226ec6713e14
