@@ -3,7 +3,7 @@ module github.com/FloatTech/ZeroBot-Plugin
 go 1.20
 
 require (
-	github.com/AIRADSK/Plugin v1.0.1
+	github.com/AIRADSK/Plugin v1.1.0
 	github.com/Baidu-AIP/golang-sdk v1.1.1
 	github.com/FloatTech/AnimeAPI v1.7.1-0.20240530072450-71c23d2f01f8
 	github.com/FloatTech/floatbox v0.0.0-20240505082030-226ec6713e14
@@ -64,6 +64,7 @@ require (
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/google/uuid v1.6.0 // indirect
+	github.com/guohuiyuan/go-fyzhq v0.0.0-20220807135412-25c16c843e5a // indirect
 	github.com/hajimehoshi/oto v0.7.1 // indirect
 	github.com/jfreymuth/oggvorbis v1.0.1 // indirect
 	github.com/jfreymuth/vorbis v1.0.0 // indirect
@@ -73,6 +74,7 @@ require (
 	github.com/liuzl/da v0.0.0-20180704015230-14771aad5b1d // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
+	github.com/mozillazg/go-pinyin v0.19.0 // indirect
 	github.com/ncruces/go-strftime v0.1.9 // indirect
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646 // indirect
 	github.com/pbnjay/memory v0.0.0-20210728143218-7b4eea64cf58 // indirect

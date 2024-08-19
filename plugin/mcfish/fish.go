@@ -15,15 +15,15 @@ import (
 )
 
 func init() {
-	engine.OnRegex(`^进行(([1-5]\d|[1-9])次)?钓鱼$`, getdb).SetBlock(true).Limit(ctxext.LimitByUser).Handle(func(ctx *zero.Ctx) {
+	engine.OnRegex(`^进行(([1-9]\d|[1-9])次)?钓鱼$`, getdb).SetBlock(true).Limit(ctxext.LimitByUser).Handle(func(ctx *zero.Ctx) {
 		uid := ctx.Event.UserID
 		numberOfPole, err := dbdata.getNumberFor(uid, "竿")
 		if err != nil {
 			ctx.SendChain(message.Text("[ERROR at store.go.9.3]:", err))
 			return
 		}
-		if numberOfPole > 30 {
-			ctx.SendChain(message.Text("你有", numberOfPole, "支鱼竿,大于30支的玩家不允许钓鱼"))
+		if numberOfPole > 70 {
+			ctx.SendChain(message.Text("你有", numberOfPole, "支鱼竿,大于70支的玩家不允许钓鱼"))
 			return
 		}
 		fishNumber := 1
