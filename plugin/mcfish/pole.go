@@ -577,11 +577,11 @@ func init() {
 			induceLevel += poles[index].Induce
 		}
 		if rand.Intn(100) >= 90 {
-			ctx.Send(
-				message.ReplyWithMessage(ctx.Event.MessageID,
-					message.Text("合成失败,材料已销毁"),
-				),
-			)
+			// ctx.Send(
+			// 	message.ReplyWithMessage(ctx.Event.MessageID,
+			// 		message.Text("合成失败,材料已销毁"),
+			// 	),
+			// )
 			numberoffailures += 1
 			goto A
 		}
@@ -598,11 +598,11 @@ func init() {
 			ctx.SendChain(message.Text("[ERROR at pole.go.12]:", err))
 			return
 		}
-		ctx.Send(
-			message.ReplyWithMessage(ctx.Event.MessageID,
-				message.Text(thingName, "合成成功", list, "\n属性: ", attribute),
-			),
-		)
+		// ctx.Send(
+		// 	message.ReplyWithMessage(ctx.Event.MessageID,
+		// 		message.Text(thingName, "合成成功", list, "\n属性: ", attribute),
+		// 	),
+		// )
 		numberofsuccesses += 1
 		goto A
 	})
