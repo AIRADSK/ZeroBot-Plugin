@@ -527,14 +527,14 @@ func init() {
 			ctx.SendChain(message.Text("[ERROR at pole.go.10]:", err))
 			return
 		}
-		max := len(articles)
-		if max < 3 && numberoffailures == 0 && numberofsuccesses == 0 {
+		max1 := len(articles)
+		if max1 < 3 && numberoffailures == 0 && numberofsuccesses == 0 {
 			ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("你的合成材料不足"))
 			return
-		} else if max < 3 {
+		} else if max1 < 3 {
 			ctx.SendChain(message.Text("合成成功次数为", numberofsuccesses, "次,失败次数为", numberoffailures, "次"))
 		}
-		poles := make([]equip, 0, max)
+		poles := make([]equip, 0, max1)
 		for _, info := range articles {
 			poleInfo := strings.Split(info.Other, "/")
 			durable, _ := strconv.Atoi(poleInfo[0])
@@ -582,7 +582,7 @@ func init() {
 			// 		message.Text("合成失败,材料已销毁"),
 			// 	),
 			// )
-			numberoffailures += 1
+			numberoffailures++
 			goto A
 		}
 		attribute := strconv.Itoa(durationList[thingName]) + "/0/" + strconv.Itoa(induceLevel/3) + "/" + strconv.Itoa(favorLevel/3)
@@ -603,7 +603,7 @@ func init() {
 		// 		message.Text(thingName, "合成成功", list, "\n属性: ", attribute),
 		// 	),
 		// )
-		numberofsuccesses += 1
+		numberofsuccesses++
 		goto A
 	})
 
