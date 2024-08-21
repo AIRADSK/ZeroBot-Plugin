@@ -506,6 +506,8 @@ func init() {
 	})
 
 	engine.OnRegex(`^自动合成(.+竿|三叉戟)$`, getdb).SetBlock(true).Limit(ctxext.LimitByUser).Handle(func(ctx *zero.Ctx) {
+		numberofsuccesses := 0
+		numberoffailures := 0
 	A:
 		uid := ctx.Event.UserID
 		thingList := []string{"木竿", "铁竿", "金竿", "钻石竿", "下界合金竿", "三叉戟"}
@@ -526,9 +528,11 @@ func init() {
 			return
 		}
 		max := len(articles)
-		if max < 3 {
+		if max < 3 && numberoffailures == 0 && numberofsuccesses == 0 {
 			ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("你的合成材料不足"))
 			return
+		} else if max < 3 {
+			ctx.SendChain(message.Text("合成成功次数为", numberofsuccesses, "次,失败次数为", numberoffailures, "次"))
 		}
 		poles := make([]equip, 0, max)
 		for _, info := range articles {
@@ -578,6 +582,7 @@ func init() {
 					message.Text("合成失败,材料已销毁"),
 				),
 			)
+			numberoffailures += 1
 			goto A
 		}
 		attribute := strconv.Itoa(durationList[thingName]) + "/0/" + strconv.Itoa(induceLevel/3) + "/" + strconv.Itoa(favorLevel/3)
@@ -598,6 +603,7 @@ func init() {
 				message.Text(thingName, "合成成功", list, "\n属性: ", attribute),
 			),
 		)
+		numberofsuccesses += 1
 		goto A
 	})
 
