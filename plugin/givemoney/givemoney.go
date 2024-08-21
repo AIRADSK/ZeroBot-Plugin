@@ -1,4 +1,4 @@
-// 给予他人ATRI币
+// package givemoney 给予他人ATRI币
 package givemoney
 
 import (

@@ -185,7 +185,10 @@ func init() { // 插件主体
 						ctx.SendChain(message.Text("你长舒了一口气, 并反手击毙了"), message.At(s.Users[1]))
 						c.Event.UserID = s.Users[1]
 						getTruthOrDare(c)
-						wallet.InsertWalletOf(s.Users[1], -100)
+						err := wallet.InsertWalletOf(s.Users[1], -100)
+						if err != nil {
+							ctx.SendChain(message.Text("恭喜逃过一劫  [ERROR]:", err))
+						}
 						//wallet.InsertWalletOf(uid, 5)
 						return
 					}
@@ -196,7 +199,10 @@ func init() { // 插件主体
 						return
 					}
 					ctx.SendChain(message.Text(aliveMsg[rand.Intn(len(aliveMsg))]), message.Text(",轮到"), message.At(s.Users[1]), message.Text("开火"))
-					wallet.InsertWalletOf(s.Users[1], 5)
+					err := wallet.InsertWalletOf(s.Users[1], 5)
+					if err != nil {
+						ctx.SendChain(message.Text("加成金币被吞掉了  [ERROR]:", err))
+					}
 				}
 			}
 		})
