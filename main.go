@@ -63,11 +63,12 @@ import (
 	//                               vvvv                               //
 
 	//_ "github.com/FloatTech/ZeroBot-Plugin/plugin/aifalse"        // 服务器监控
-	_ "github.com/AIRADSK/Plugin/cybercat"                          // 云养猫
-	_ "github.com/AIRADSK/Plugin/fyzhq"                             // 发音转换器
-	_ "github.com/AIRADSK/Plugin/ghrepo"                            // github仓库信息
-	_ "github.com/AIRADSK/Plugin/givemoney"                         // 赠送金币
-	_ "github.com/AIRADSK/Plugin/movie"                             // 影视查询
+	//_ "github.com/AIRADSK/Plugin/cybercat"                          // 云养猫
+	//_ "github.com/AIRADSK/Plugin/fyzhq"                             // 发音转换器
+	_ "github.com/AIRADSK/Plugin/ghrepo"    // github仓库信息
+	_ "github.com/AIRADSK/Plugin/givemoney" // 赠送金币
+
+	//_ "github.com/AIRADSK/Plugin/movie"                             // 影视查询
 	_ "github.com/AIRADSK/Plugin/partygame"                         // 派对游戏轮盘赌
 	_ "github.com/AIRADSK/Plugin/tgyj"                              // 同归于尽
 	_ "github.com/FloatTech/ZeroBot-Plugin/custom"                  // 自定义插件合集
