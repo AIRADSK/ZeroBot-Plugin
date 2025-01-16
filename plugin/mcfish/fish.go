@@ -3,6 +3,7 @@ package mcfish
 
 import (
 	"math/rand"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -14,8 +15,40 @@ import (
 	"github.com/wdvxdr1123/ZeroBot/message"
 )
 
+var filename = "FishLimit.gob"
+
+func init() {
+	engine.OnPrefix("设置钓鱼次数上限为", zero.OnlyGroup, zero.SuperUserPermission).SetBlock(true).
+		Handle(func(ctx *zero.Ctx) {
+			param := strings.TrimSpace(ctx.State["args"].(string))
+
+			re := regexp.MustCompile(`^[+-]?\d+$`)
+			fishlimit, err := strconv.Atoi(re.FindString(param))
+			FishLimit = fishlimit
+			if err := saveFL(filename, FishLimit); err != nil {
+				ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("保存失败"))
+				return
+			}
+			ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("成功设置为 ", FishLimit, "次~"))
+			if err != nil {
+				ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("输入的次数不合法~"))
+				return
+			}
+		})
+}
+
 func init() {
 	engine.OnRegex(`^进行(([1-9]\d|[1-9]|721)次)?钓鱼$`, getdb).SetBlock(true).Limit(ctxext.LimitByUser).Handle(func(ctx *zero.Ctx) {
+		if FishLimit == 0 {
+			num, err := readFL(filename)
+			if err != nil {
+				ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("读取失败"))
+				return
+			} else {
+				FishLimit = num
+			}
+
+		}
 		uid := ctx.Event.UserID
 		numberOfPole, err := dbdata.getNumberFor(uid, "竿")
 		if err != nil {

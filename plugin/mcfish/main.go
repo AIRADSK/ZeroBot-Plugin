@@ -2,6 +2,7 @@
 package mcfish
 
 import (
+	"encoding/gob"
 	"encoding/json"
 	"math/rand"
 	"os"
@@ -26,7 +27,8 @@ type fishdb struct {
 }
 
 // FishLimit 钓鱼次数上限
-const FishLimit = 721
+
+var FishLimit int
 
 // version 规则版本号
 const version = "5.6.0"
@@ -837,4 +839,25 @@ func checkIsWaste(thing string) bool {
 		}
 	}
 	return false
+}
+func saveFL(fishLimit string, value int) error {
+	// 创建文件并编码保存
+	file, err := os.Create(fishLimit)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	return gob.NewEncoder(file).Encode(value)
+}
+
+func readFL(fishLimit string) (int, error) {
+	// 打开文件并解码读取
+	file, err := os.Open(fishLimit)
+	if err != nil {
+		return 0, err
+	}
+	defer file.Close()
+	var value int
+	err = gob.NewDecoder(file).Decode(&value)
+	return value, err
 }

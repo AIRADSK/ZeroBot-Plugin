@@ -1,6 +1,6 @@
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
-github.com/AIRADSK/Plugin v1.1.0 h1:dHsqoxE7E8KCO2kmK7R9SQ7EbcfJxeYz3lMRFyo68cM=
-github.com/AIRADSK/Plugin v1.1.0/go.mod h1:yM253J6/84MwEp61SvgzcXfh1YXcOMOA5cTJ67e1eD4=
+github.com/AIRADSK/Plugin v1.1.1 h1:KKQ29ZfW94NgQki2Y2kloQhDnlIY5LhZDKSQiyG7dIM=
+github.com/AIRADSK/Plugin v1.1.1/go.mod h1:yM253J6/84MwEp61SvgzcXfh1YXcOMOA5cTJ67e1eD4=
 github.com/Baidu-AIP/golang-sdk v1.1.1 h1:RQsAmgDSAkiq22I6n7XJ2t3afgzFeqjY46FGhvrx4cw=
 github.com/Baidu-AIP/golang-sdk v1.1.1/go.mod h1:bXnGw7xPeKt8aF7UCELKrV6UZ/46spItONK1RQBQj1Y=
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=
