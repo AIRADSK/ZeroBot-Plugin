@@ -128,11 +128,11 @@ func init() {
 				return
 			}
 			if n <= 0 {
-				ctx.SendChain(message.Text("ERROR: 张数必须为正"))
+				ctx.SendChain(message.Text("张数必须为正~"))
 				return
 			}
-			if n > 20 {
-				ctx.SendChain(message.Text("ERROR: 抽取张数过多"))
+			if n > 78 {
+				ctx.SendChain(message.Text("抽取张数过多~"))
 				return
 			}
 		}
