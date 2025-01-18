@@ -27,7 +27,6 @@ type fishdb struct {
 }
 
 // FishLimit 钓鱼次数上限
-
 var FishLimit int
 
 // version 规则版本号
@@ -832,7 +831,7 @@ func checkIsWaste(thing string) bool {
 	return false
 }
 func saveFL(fishLimit string, value int) error {
-	// 创建文件并编码保存
+	//保存FishLimit
 	file, err := os.Create(fishLimit)
 	if err != nil {
 		return err
@@ -842,7 +841,7 @@ func saveFL(fishLimit string, value int) error {
 }
 
 func readFL(fishLimit string) (int, error) {
-	// 打开文件并解码读取
+	//读取FishLimit
 	file, err := os.Open(fishLimit)
 	if err != nil {
 		return 0, err
