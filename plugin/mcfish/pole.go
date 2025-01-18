@@ -13,6 +13,37 @@ import (
 )
 
 func init() {
+	engine.OnPrefix("钓鱼背包4", zero.OnlyGroup, zero.SuperUserPermission).SetBlock(true).
+		Handle(func(ctx *zero.Ctx) {
+			var uidStr string
+			if len(ctx.Event.Message) > 1 && ctx.Event.Message[1].Type == "at" {
+				uidStr = ctx.Event.Message[1].Data["qq"]
+			} else {
+				ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("获取对方信息出错"))
+			}
+			uid, err := strconv.ParseInt(uidStr, 10, 64)
+			if err != nil {
+				ctx.SendChain(message.Text("[ERROR]:", err))
+				return
+			}
+			equipInfo, err := dbdata.getUserEquip(uid)
+			if err != nil {
+				ctx.SendChain(message.Text("[ERROR at pole.go.29]:", err))
+				return
+			}
+			articles, err := dbdata.getUserPack(uid)
+			if err != nil {
+				ctx.SendChain(message.Text("[ERROR at pole.go.34]:", err))
+				return
+			}
+			pic, err := drawPackImage(uid, equipInfo, articles)
+			if err != nil {
+				ctx.SendChain(message.Text("[ERROR at pole.go.39]:", err))
+				return
+			}
+			ctx.SendChain(message.ImageBytes(pic))
+		})
+
 	engine.OnRegex(`^装备(`+strings.Join(poleList, "|")+`)$`, getdb).SetBlock(true).Limit(ctxext.LimitByUser).Handle(func(ctx *zero.Ctx) {
 		uid := ctx.Event.UserID
 		equipInfo, err := dbdata.getUserEquip(uid)
