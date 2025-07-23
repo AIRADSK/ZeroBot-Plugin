@@ -254,9 +254,9 @@ func init() {
 
 	// 通过代码写死的方式添加主人账号
 	sus = append(sus, 3482668189) //AIRA DSK
-	sus = append(sus, 3582687772) //
 	sus = append(sus, 1376968126) //
-	sus = append(sus, 1792157206) //乐崽
+	sus = append(sus, 1198633583) //连接
+	//sus = append(sus, 1792157206) //乐崽
 	//sus = append(sus, 1480459201) //淼
 
 	// 启用 webui

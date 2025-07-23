@@ -23,6 +23,36 @@ import (
 )
 
 func init() {
+	engine.OnPrefix("查看钓鱼背包", zero.SuperUserPermission).SetBlock(true).
+		Handle(func(ctx *zero.Ctx) {
+			var uidStr string
+			if len(ctx.Event.Message) > 1 && ctx.Event.Message[1].Type == "at" {
+				uidStr = ctx.Event.Message[1].Data["qq"]
+			} else {
+				ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("获取对方信息出错"))
+			}
+			uid, err := strconv.ParseInt(uidStr, 10, 64)
+			if err != nil {
+				ctx.SendChain(message.Text("[ERROR]:", err))
+				return
+			}
+			equipInfo, err := dbdata.getUserEquip(uid)
+			if err != nil {
+				ctx.SendChain(message.Text("[ERROR at pack.go.29]:", err))
+				return
+			}
+			articles, err := dbdata.getUserPack(uid)
+			if err != nil {
+				ctx.SendChain(message.Text("[ERROR at pack.go.34]:", err))
+				return
+			}
+			pic, err := drawPackImage(uid, equipInfo, articles)
+			if err != nil {
+				ctx.SendChain(message.Text("[ERROR at pack.go.39]:", err))
+				return
+			}
+			ctx.SendChain(message.ImageBytes(pic))
+		})
 	engine.OnFullMatch("钓鱼背包", getdb).SetBlock(true).Limit(ctxext.LimitByUser).Handle(func(ctx *zero.Ctx) {
 		uid := ctx.Event.UserID
 		equipInfo, err := dbdata.getUserEquip(uid)
@@ -189,7 +219,7 @@ func init() {
 			"5.鱼类信息:\n-> 鳕鱼 : 均价:10 上钩概率:0.69%\n-> 鲑鱼 : 均价:50 上钩概率:0.2%\n-> 热带鱼 : 均价:100 上钩概率:0.06%\n-> 河豚 : 均价:300 上钩概率:0.03%\n-> 鹦鹉螺 : 均价:500 上钩概率:0.01%\n-> 墨鱼 : 均价:500 上钩概率:0.01%\n" +
 			"6.垃圾:\n-> 均价:10 上钩概率:30%\n" +
 			"7.物品BUFF:\n-> 钓鱼佬 : 当背包名字含有'鱼'的物品数量超过100时激活,钓到物品概率提高至90%\n-> 修复大师 : 当背包鱼竿数量超过10时激活,修复物品时耐久百分百继承\n" +
-			"8.合成:\n-> 铁竿 : 3x木竿\n-> 金竿 : 3x铁竿\n-> 钻石竿 : 3x金竿\n-> 下界合金竿 : 3x钻石竿\n-> 三叉戟 : 3x下界合金竿\n注:合成成功率90%(包括梭哈),合成鱼竿的附魔等级=（附魔等级合/合成鱼竿数量）\n" +
+			"8.合成:\n-> 石竿 : 3x木竿\n-> 铁竿 : 3x石竿\n-> 金竿 : 3x铁竿\n-> 钻石竿 : 3x金竿\n-> 下界合金竿 : 3x钻石竿\n-> 三叉戟 : 3x下界合金竿\n注:合成成功率90%(包括梭哈),合成鱼竿的附魔等级=（附魔等级合/合成鱼竿数量）\n" +
 			"9.杂项:\n-> 无装备的情况下,每人最多可以购买3次100块钱的鱼竿\n-> 默认状态钓鱼上钩概率为60%(理论值!!!)\n-> 附魔的鱼竿会因附魔变得昂贵,每个附魔最高3级\n-> 三叉戟不算鱼竿,修复时可直接满耐久\n" +
 			"-> 鱼竿数量大于50的不能买东西;\n     鱼竿数量大于30的不能钓鱼;\n     每购/售10次鱼竿获得1层宝藏诅咒;\n     每购买20次物品将获得3次价格减半福利;\n     每钓鱼75次获得1本净化书;\n" +
 			"     每天可交易鱼竿10个，购买物品30件（垃圾除外）."

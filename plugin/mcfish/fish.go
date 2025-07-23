@@ -46,6 +46,7 @@ func init() {
 				return
 			} else {
 				FishLimit = num
+				return
 			}
 
 		}
@@ -56,7 +57,7 @@ func init() {
 			return
 		}
 		if numberOfPole > 70 {
-			ctx.SendChain(message.Text("你有", numberOfPole, "支鱼竿,大于70支的玩家不允许钓鱼"))
+			ctx.SendChain(message.Text("你有", numberOfPole, "支鱼竿,大于70支的玻璃竿不允许钓鱼"))
 			return
 		}
 		fishNumber := 1
@@ -186,7 +187,7 @@ func init() {
 			fishNumber /= 3
 		}
 		waitTime := 120 / (equipInfo.Induce + 1)
-		ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("你开始去钓鱼了,请耐心等待鱼上钩(预计要", time.Second*time.Duration(waitTime), ")"))
+		ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("你开始去钓玻璃竿了,请耐心等待玻璃竿上钩(预计要", time.Second*time.Duration(waitTime), ")"))
 		timer := time.NewTimer(time.Second * time.Duration(rand.Intn(waitTime)+1))
 		for {
 			<-timer.C

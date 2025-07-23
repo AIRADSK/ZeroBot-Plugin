@@ -830,8 +830,9 @@ func checkIsWaste(thing string) bool {
 	}
 	return false
 }
+
+// 保存FishLimit
 func saveFL(fishLimit string, value int) error {
-	//保存FishLimit
 	file, err := os.Create(fishLimit)
 	if err != nil {
 		return err
@@ -840,8 +841,8 @@ func saveFL(fishLimit string, value int) error {
 	return gob.NewEncoder(file).Encode(value)
 }
 
+// 读取FishLimit
 func readFL(fishLimit string) (int, error) {
-	//读取FishLimit
 	file, err := os.Open(fishLimit)
 	if err != nil {
 		return 0, err

@@ -13,37 +13,6 @@ import (
 )
 
 func init() {
-	engine.OnPrefix("钓鱼背包4", zero.OnlyGroup, zero.SuperUserPermission).SetBlock(true).
-		Handle(func(ctx *zero.Ctx) {
-			var uidStr string
-			if len(ctx.Event.Message) > 1 && ctx.Event.Message[1].Type == "at" {
-				uidStr = ctx.Event.Message[1].Data["qq"]
-			} else {
-				ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("获取对方信息出错"))
-			}
-			uid, err := strconv.ParseInt(uidStr, 10, 64)
-			if err != nil {
-				ctx.SendChain(message.Text("[ERROR]:", err))
-				return
-			}
-			equipInfo, err := dbdata.getUserEquip(uid)
-			if err != nil {
-				ctx.SendChain(message.Text("[ERROR at pole.go.29]:", err))
-				return
-			}
-			articles, err := dbdata.getUserPack(uid)
-			if err != nil {
-				ctx.SendChain(message.Text("[ERROR at pole.go.34]:", err))
-				return
-			}
-			pic, err := drawPackImage(uid, equipInfo, articles)
-			if err != nil {
-				ctx.SendChain(message.Text("[ERROR at pole.go.39]:", err))
-				return
-			}
-			ctx.SendChain(message.ImageBytes(pic))
-		})
-
 	engine.OnRegex(`^装备(`+strings.Join(poleList, "|")+`)$`, getdb).SetBlock(true).Limit(ctxext.LimitByUser).Handle(func(ctx *zero.Ctx) {
 		uid := ctx.Event.UserID
 		equipInfo, err := dbdata.getUserEquip(uid)
@@ -375,7 +344,7 @@ func init() {
 	})
 	engine.OnRegex(`^合成(.+竿|三叉戟)$`, getdb).SetBlock(true).Limit(ctxext.LimitByUser).Handle(func(ctx *zero.Ctx) {
 		uid := ctx.Event.UserID
-		thingList := []string{"木竿", "铁竿", "金竿", "钻石竿", "下界合金竿", "三叉戟"}
+		thingList := []string{"木竿", "石竿", "铁竿", "金竿", "钻石竿", "下界合金竿", "三叉戟"}
 		thingName := ctx.State["regex_matched"].([]string)[1]
 		indexOfMaterial := -1
 		for i, name := range thingList {
@@ -534,108 +503,6 @@ func init() {
 				message.Text("成功合成：", upgradeNum/3, "个", thingName, "\n属性: ", attribute),
 			),
 		)
-	})
-
-	engine.OnRegex(`^自动合成(.+竿|三叉戟)$`, getdb).SetBlock(true).Limit(ctxext.LimitByUser).Handle(func(ctx *zero.Ctx) {
-		numberofsuccesses := 0
-		numberoffailures := 0
-	A:
-		uid := ctx.Event.UserID
-		thingList := []string{"木竿", "铁竿", "金竿", "钻石竿", "下界合金竿", "三叉戟"}
-		thingName := ctx.State["regex_matched"].([]string)[1]
-		indexOfMaterial := -1
-		for i, name := range thingList {
-			if thingName == name {
-				indexOfMaterial = (i - 1)
-				break
-			}
-		}
-		if indexOfMaterial < 0 {
-			return
-		}
-		articles, err := dbdata.getUserThingInfo(uid, thingList[indexOfMaterial])
-		if err != nil {
-			ctx.SendChain(message.Text("[ERROR at pole.go.10]:", err))
-			return
-		}
-		max1 := len(articles)
-		if max1 < 3 && numberoffailures == 0 && numberofsuccesses == 0 {
-			ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text("你的合成材料不足"))
-			return
-		} else if max1 < 3 {
-			ctx.SendChain(message.Text("合成成功次数为", numberofsuccesses, "次,失败次数为", numberoffailures, "次"))
-		}
-		poles := make([]equip, 0, max1)
-		for _, info := range articles {
-			poleInfo := strings.Split(info.Other, "/")
-			durable, _ := strconv.Atoi(poleInfo[0])
-			maintenance, _ := strconv.Atoi(poleInfo[1])
-			induceLevel, _ := strconv.Atoi(poleInfo[2])
-			favorLevel, _ := strconv.Atoi(poleInfo[3])
-			poles = append(poles, equip{
-				ID:          uid,
-				Equip:       info.Name,
-				Durable:     durable,
-				Maintenance: maintenance,
-				Induce:      induceLevel,
-				Favor:       favorLevel,
-			})
-		}
-		list := []int{0, 1, 2}
-		/*if len(articles) > 3 {
-			msg := make(message.Message, 0, 3+len(articles))
-			msg = append(msg, message.Text("找到以下鱼竿:\n"))
-			for i, info := range poles {
-				msg = append(msg, message.Text("[", i, "] ", info.Equip, " : 耐", info.Durable, "/修", info.Maintenance,
-					"/诱", enchantLevel[info.Induce], "/眷顾", enchantLevel[info.Favor], "\n"))
-			}
-			msg = append(msg, message.Text("————————\n输入3个序号进行合成(用空格分割)"))
-			ctx.Send(message.ReplyWithMessage(ctx.Event.MessageID, msg...))
-
-		}*/
-
-		favorLevel := 0
-		induceLevel := 0
-		for _, index := range list {
-			thingInfo := articles[index]
-			thingInfo.Number = 0
-			err = dbdata.updateUserThingInfo(uid, thingInfo)
-			if err != nil {
-				ctx.SendChain(message.Text("[ERROR at pole.go.12]:", err))
-				return
-			}
-			favorLevel += poles[index].Favor
-			induceLevel += poles[index].Induce
-		}
-		if rand.Intn(100) >= 90 {
-			// ctx.Send(
-			// 	message.ReplyWithMessage(ctx.Event.MessageID,
-			// 		message.Text("合成失败,材料已销毁"),
-			// 	),
-			// )
-			numberoffailures++
-			goto A
-		}
-		attribute := strconv.Itoa(durationList[thingName]) + "/0/" + strconv.Itoa(induceLevel/3) + "/" + strconv.Itoa(favorLevel/3)
-		newthing := article{
-			Duration: time.Now().Unix(),
-			Type:     "pole",
-			Name:     thingName,
-			Number:   1,
-			Other:    attribute,
-		}
-		err = dbdata.updateUserThingInfo(uid, newthing)
-		if err != nil {
-			ctx.SendChain(message.Text("[ERROR at pole.go.12]:", err))
-			return
-		}
-		// ctx.Send(
-		// 	message.ReplyWithMessage(ctx.Event.MessageID,
-		// 		message.Text(thingName, "合成成功", list, "\n属性: ", attribute),
-		// 	),
-		// )
-		numberofsuccesses++
-		goto A
 	})
 
 }

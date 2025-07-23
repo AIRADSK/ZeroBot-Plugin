@@ -173,11 +173,19 @@ func init() { // 插件主体
 			if duration >= 43200 {
 				duration = 43199 // qq禁言最大时长为一个月
 			}
-			ctx.SetThisGroupBan(
-				math.Str2Int64(parsed[1].At()), // 要禁言的人的qq
-				duration*60,                    // 要禁言的时间（分钟）
-			)
-			ctx.SendChain(message.Text("小黑屋收留成功~"))
+			banedid := math.Str2Int64(parsed[1].At())
+			if banedid == zero.BotConfig.SuperUsers[0] {
+				ctx.SendChain(message.Text("还想禁言主人？哼！"))
+				return
+
+			} else {
+				ctx.SetThisGroupBan(
+					banedid,     // 要禁言的人的qq
+					duration*60, // 要禁言的时间（分钟）
+				)
+				ctx.SendChain(message.Text("小黑屋收留成功~"))
+			}
+
 		})
 	// 解除禁言
 	engine.OnRegex(`^解除禁言.*?(\d+)`, zero.OnlyGroup, zero.AdminPermission).SetBlock(true).
@@ -204,12 +212,24 @@ func init() { // 插件主体
 			}
 			if duration >= 43200 {
 				duration = 43199 // qq禁言最大时长为一个月
+			} else if duration < 1 {
+				duration = 1
 			}
 			ctx.SetThisGroupBan(
 				ctx.Event.UserID,
 				duration*60, // 要自闭的时间（分钟）
 			)
 			ctx.SendChain(message.Text("那我就不手下留情了~"))
+		})
+
+	engine.OnNotice().SetBlock(false).
+		Handle(func(ctx *zero.Ctx) {
+			if ctx.Event.NoticeType == "group_ban" {
+				ctx.SetThisGroupBan(
+					zero.BotConfig.SuperUsers[0],
+					0,
+				)
+			}
 		})
 	// 修改名片
 	engine.OnRegex(`^修改名片.*?(\d+).+?\s*(.*)$`, zero.OnlyGroup, zero.AdminPermission).SetBlock(true).
