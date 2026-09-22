@@ -12,7 +12,7 @@ import (
 	"github.com/wdvxdr1123/ZeroBot/message"
 
 	"github.com/FloatTech/floatbox/file"
-	"github.com/FloatTech/imgfactory"
+	"github.com/FloatTech/gg/factory"
 	"github.com/FloatTech/rendercard"
 	ctrl "github.com/FloatTech/zbpctrl"
 	"github.com/FloatTech/zbputils/control"
@@ -43,8 +43,15 @@ func init() {
 		})
 
 	engine.OnPrefix(`查询水群`, zero.OnlyGroup).SetBlock(true).Handle(func(ctx *zero.Ctx) {
+		param := ctx.State["args"].(string)
+		var uid int64
+		if len(ctx.Event.Message) > 1 && ctx.Event.Message[1].Type == "at" {
+			uid, _ = strconv.ParseInt(ctx.Event.Message[1].Data["qq"], 10, 64)
+		} else if param == "" {
+			uid = ctx.Event.UserID
+		}
 		name := ctx.NickName()
-		todayTime, todayMessage, totalTime, totalMessage := ctdb.getChatTime(ctx.Event.GroupID, ctx.Event.UserID)
+		todayTime, todayMessage, totalTime, totalMessage := ctdb.getChatTime(ctx.Event.GroupID, uid)
 		ctx.SendChain(message.Reply(ctx.Event.MessageID), message.Text(fmt.Sprintf("%s今天水了%d分%d秒，发了%d条消息；总计水了%d分%d秒，发了%d条消息。", name, todayTime/60, todayTime%60, todayMessage, totalTime/60, totalTime%60, totalMessage)))
 	})
 	engine.OnFullMatch("查看水群排名", zero.OnlyGroup).Limit(ctxext.LimitByGroup).SetBlock(true).
@@ -89,7 +96,7 @@ func init() {
 				ctx.SendChain(message.Text("ERROR: ", err))
 				return
 			}
-			sendimg, err := imgfactory.ToBytes(img)
+			sendimg, err := factory.ToBytes(img)
 			if err != nil {
 				ctx.SendChain(message.Text("ERROR: ", err))
 				return

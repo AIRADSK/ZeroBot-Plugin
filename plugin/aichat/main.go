@@ -1,16 +1,18 @@
-// Package aichat OpenAI聊天
+// Package aichat 大模型聊天和Agent
 package aichat
 
 import (
+	"encoding/json"
 	"math/rand"
-	"strconv"
 	"strings"
 
+	"github.com/RomiChan/syncx"
 	"github.com/fumiama/deepinfra"
-	"github.com/fumiama/deepinfra/model"
+	goba "github.com/fumiama/go-onebot-agent"
 	"github.com/sirupsen/logrus"
 
 	zero "github.com/wdvxdr1123/ZeroBot"
+	"github.com/wdvxdr1123/ZeroBot/extension/single"
 	"github.com/wdvxdr1123/ZeroBot/message"
 
 	"github.com/FloatTech/AnimeAPI/airecord"
@@ -25,103 +27,132 @@ var (
 	en = control.AutoRegister(&ctrl.Options[*zero.Ctx]{
 		DisableOnDefault: false,
 		Extra:            control.ExtraFromString("aichat"),
-		Brief:            "OpenAI聊天",
-		Help: "- 设置AI聊天触发概率10\n" +
-			"- 设置AI聊天温度80\n" +
-			"- 设置AI聊天接口类型[OpenAI|OLLaMA|GenAI]\n" +
-			"- 设置AI聊天(不)支持系统提示词\n" +
-			"- 设置AI聊天接口地址https://api.deepseek.com/chat/completions\n" +
-			"- 设置AI聊天密钥xxx\n" +
-			"- 设置AI聊天模型名xxx\n" +
-			"- 查看AI聊天系统提示词\n" +
-			"- 重置AI聊天系统提示词\n" +
-			"- 设置AI聊天系统提示词xxx\n" +
-			"- 设置AI聊天分隔符</think>(留空则清除)\n" +
-			"- 设置AI聊天(不)响应AT\n" +
-			"- 设置AI聊天最大长度4096\n" +
-			"- 设置AI聊天TopP 0.9\n" +
-			"- 设置AI聊天(不)以AI语音输出\n" +
-			"- 查看AI聊天配置\n",
+		Brief:            "大模型聊天和Agent",
+		Help:             "- (随意聊天, 概率匹配)",
+
 		PrivateDataFolder: "aichat",
-	})
+	}).ApplySingle(single.New(
+		single.WithKeyFn(func(ctx *zero.Ctx) int64 {
+			if ctx.Event.GroupID == 0 {
+				return -ctx.Event.UserID
+			}
+			return ctx.Event.GroupID
+		}),
+		// no post option, silently quit
+	))
 )
 
 var (
-	apitypes = map[string]uint8{
-		"OpenAI": 0,
-		"OLLaMA": 1,
-		"GenAI":  2,
-	}
-	apilist = [3]string{"OpenAI", "OLLaMA", "GenAI"}
+	fastfailnorecord = false
 )
 
 func init() {
-	en.OnMessage(ensureconfig, func(ctx *zero.Ctx) bool {
-		return ctx.ExtractPlainText() != "" &&
-			(!cfg.NoReplyAT || (cfg.NoReplyAT && !ctx.Event.IsToMe))
+	en.OnMessage(chat.EnsureConfig, func(ctx *zero.Ctx) bool {
+		stor, ok := ctx.State[zero.StateKeyPrefixKeep+"aichatcfg_stor__"].(chat.Storage)
+		if !ok {
+			logrus.Warnln("ERROR: cannot get stor")
+			return false
+		}
+		mp := ctx.State[control.StateKeySyncxState].(*syncx.Map[string, any])
+		if _, ok := mp.Load(chat.StateKeyAgentHooked); !ok && !stor.NoAgent() {
+			logrus.Infoln("[aichat] skip agent for ctx has not been hooked by agent")
+			return false
+		}
+		if !(ctx.ExtractPlainText() != "" &&
+			(!stor.NoReplyAt() || (stor.NoReplyAt() && !ctx.Event.IsToMe))) {
+			return false
+		}
+		rate := stor.Rate()
+		if !ctx.Event.IsToMe && rand.Intn(100) >= int(rate) {
+			return false
+		}
+		if ctx.Event.IsToMe {
+			ctx.Block()
+		}
+		return true
 	}).SetBlock(false).Handle(func(ctx *zero.Ctx) {
 		gid := ctx.Event.GroupID
 		if gid == 0 {
 			gid = -ctx.Event.UserID
 		}
-		c, ok := ctx.State["manager"].(*ctrl.Control[*zero.Ctx])
-		if !ok {
-			return
-		}
-		rate := c.GetData(gid)
-		temp := (rate >> 8) & 0xff
-		rate &= 0xff
-		if !ctx.Event.IsToMe && rand.Intn(100) >= int(rate) {
-			return
-		}
-		if ctx.Event.IsToMe {
-			ctx.Block()
-		}
-		if cfg.Key == "" {
-			logrus.Warnln("ERROR: get extra err: empty key")
-			return
+		stor := ctx.State[zero.StateKeyPrefixKeep+"aichatcfg_stor__"].(chat.Storage)
+		temperature := stor.Temp()
+		topp, maxn := chat.AC.MParams()
+		mp := ctx.State[control.StateKeySyncxState].(*syncx.Map[string, any])
+
+		logrus.Debugln("[aichat] agent mode test: noagent", stor.NoAgent(), "hasapi", chat.AC.AgentAPI != "", "hasmodel", chat.AC.AgentModelName != "")
+		if !stor.NoAgent() && chat.AC.AgentAPI != "" && chat.AC.AgentModelName != "" && chat.AC.Key != "" {
+			logrus.Debugln("[aichat] enter agent mode")
+			x := deepinfra.NewAPI(chat.AC.AgentAPI, string(chat.AC.AgentKey))
+			mod, err := chat.AC.Type.Protocol(chat.AC.AgentModelName, temperature, topp, maxn, chat.AC.ReasoningEffort)
+			if err != nil {
+				logrus.Warnln("ERROR: ", err)
+				return
+			}
+			role := goba.PermRoleUser
+			if zero.AdminPermission(ctx) {
+				role = goba.PermRoleAdmin
+				if zero.SuperUserPermission(ctx) {
+					role = goba.PermRoleOwner
+				}
+			}
+			c, ok := ctx.State["manager"].(*ctrl.Control[*zero.Ctx])
+			if !ok {
+				logrus.Warnln("ERROR: cannot get ctrl mamager")
+			}
+			ag := chat.AgentOf(ctx.Event.SelfID, c.Service)
+			logrus.Debugln("[aichat] got agent")
+			if chat.AC.ImageAPI != "" && !ag.CanViewImage() {
+				mod, err := chat.AC.ImageType.Protocol(chat.AC.ImageModelName, temperature, topp, maxn, chat.AC.ReasoningEffort)
+				if err != nil {
+					logrus.Warnln("ERROR: ", err)
+					return
+				}
+				ag.SetViewImageAPI(deepinfra.NewAPI(chat.AC.ImageAPI, string(chat.AC.ImageKey)), mod)
+				logrus.Debugln("[aichat] agent set img")
+			}
+			ctx.NoTimeout()
+			logrus.Debugln("[aichat] agent set no timeout")
+			hasresp := false
+			for i := 0; i < 8; i++ { // 最大运行 8 轮因为问答上下文只有 16
+				reqs := chat.CallAgent(ag, zero.SuperUserPermission(ctx), i+1, x, mod, gid, role)
+				if len(reqs) == 0 {
+					logrus.Debugln("[aichat] agent call got empty response")
+					break
+				}
+				hasresp = true
+				mp.Store(chat.StateKeyAgentTriggered, struct{}{})
+				for _, req := range reqs {
+					if req.Action == goba.SVM { // is a fake action
+						continue
+					}
+					logrus.Debugln("[chat] agent triggered", gid, "add requ:", &req)
+					ag.AddRequest(gid, &req)
+					rsp := ctx.CallAction(req.Action, req.Params)
+					logrus.Debugln("[chat] agent triggered", gid, "add resp:", &rsp)
+					ag.AddResponse(gid, &goba.APIResponse{
+						Status:  rsp.Status,
+						Data:    json.RawMessage(rsp.Data.Raw),
+						Message: rsp.Message,
+						Wording: rsp.Wording,
+						RetCode: rsp.RetCode,
+					})
+				}
+			}
+			if hasresp {
+				return
+			}
+			// no response, fall back to normal chat
+			logrus.Debugln("[aichat] agent fell back to normal chat")
 		}
 
-		if temp <= 0 {
-			temp = 70 // default setting
-		}
-		if temp > 100 {
-			temp = 100
-		}
-
-		x := deepinfra.NewAPI(cfg.API, cfg.Key)
-		var mod model.Protocol
-		maxn := cfg.MaxN
-		if maxn == 0 {
-			maxn = 4096
-		}
-		topp := cfg.TopP
-		if topp == 0 {
-			topp = 0.9
-		}
-
-		switch cfg.Type {
-		case 0:
-			mod = model.NewOpenAI(
-				cfg.ModelName, cfg.Separator,
-				float32(temp)/100, topp, maxn,
-			)
-		case 1:
-			mod = model.NewOLLaMA(
-				cfg.ModelName, cfg.Separator,
-				float32(temp)/100, topp, maxn,
-			)
-		case 2:
-			mod = model.NewGenAI(
-				cfg.ModelName,
-				float32(temp)/100, topp, maxn,
-			)
-		default:
-			logrus.Warnln("[aichat] unsupported AI type", cfg.Type)
+		x := deepinfra.NewAPI(chat.AC.API, string(chat.AC.Key))
+		mod, err := chat.AC.Type.Protocol(chat.AC.ModelName, temperature, topp, maxn, chat.AC.ReasoningEffort)
+		if err != nil {
+			logrus.Warnln("ERROR: ", err)
 			return
 		}
-
-		data, err := x.Request(chat.Ask(mod, gid, cfg.SystemP, cfg.NoSystemP))
+		data, err := x.Request(chat.GetChatContext(mod, gid, chat.AC.SystemP, bool(chat.AC.NoSystemP)))
 		if err != nil {
 			logrus.Warnln("[aichat] post err:", err)
 			return
@@ -129,7 +160,7 @@ func init() {
 
 		txt := chat.Sanitize(strings.Trim(data, "\n 　"))
 		if len(txt) > 0 {
-			chat.Reply(gid, txt)
+			chat.AddChatReply(gid, txt)
 			nick := zero.BotConfig.NickName[rand.Intn(len(zero.BotConfig.NickName))]
 			txt = strings.ReplaceAll(txt, "{name}", ctx.CardOrNickName(ctx.Event.UserID))
 			txt = strings.ReplaceAll(txt, "{me}", nick)
@@ -141,168 +172,24 @@ func init() {
 				if t == "" {
 					continue
 				}
-				logrus.Infoln("[aichat] 回复内容:", t)
+				logrus.Debugln("[aichat] 回复内容:", t)
 				recCfg := airecord.GetConfig()
 				record := ""
-				if !cfg.NoRecord {
+				if !fastfailnorecord && !stor.NoRecord() {
 					record = ctx.GetAIRecord(recCfg.ModelID, recCfg.Customgid, t)
-				}
-				if record != "" {
-					ctx.SendChain(message.Record(record))
-				} else {
-					if id != nil {
-						id = ctx.SendChain(message.Reply(id), message.Text(t))
-					} else {
-						id = ctx.SendChain(message.Text(t))
+					if record != "" {
+						ctx.SendChain(message.Record(record))
+						continue
 					}
+					fastfailnorecord = true
+				}
+				if id != nil {
+					id = ctx.SendChain(message.Reply(id), message.Text(t))
+				} else {
+					id = ctx.SendChain(message.Text(t))
 				}
 				process.SleepAbout1sTo2s()
 			}
 		}
 	})
-	en.OnPrefix("设置AI聊天触发概率", zero.AdminPermission).SetBlock(true).Handle(func(ctx *zero.Ctx) {
-		args := strings.TrimSpace(ctx.State["args"].(string))
-		if args == "" {
-			ctx.SendChain(message.Text("ERROR: empty args"))
-			return
-		}
-		c, ok := ctx.State["manager"].(*ctrl.Control[*zero.Ctx])
-		if !ok {
-			ctx.SendChain(message.Text("ERROR: no such plugin"))
-			return
-		}
-		r, err := strconv.Atoi(args)
-		if err != nil {
-			ctx.SendChain(message.Text("ERROR: parse rate err: ", err))
-			return
-		}
-		if r > 100 {
-			r = 100
-		} else if r < 0 {
-			r = 0
-		}
-		gid := ctx.Event.GroupID
-		if gid == 0 {
-			gid = -ctx.Event.UserID
-		}
-		val := c.GetData(gid) & (^0xff)
-		err = c.SetData(gid, val|int64(r&0xff))
-		if err != nil {
-			ctx.SendChain(message.Text("ERROR: set data err: ", err))
-			return
-		}
-		ctx.SendChain(message.Text("成功"))
-	})
-	en.OnPrefix("设置AI聊天温度", zero.AdminPermission).SetBlock(true).Handle(func(ctx *zero.Ctx) {
-		args := strings.TrimSpace(ctx.State["args"].(string))
-		if args == "" {
-			ctx.SendChain(message.Text("ERROR: empty args"))
-			return
-		}
-		c, ok := ctx.State["manager"].(*ctrl.Control[*zero.Ctx])
-		if !ok {
-			ctx.SendChain(message.Text("ERROR: no such plugin"))
-			return
-		}
-		r, err := strconv.Atoi(args)
-		if err != nil {
-			ctx.SendChain(message.Text("ERROR: parse rate err: ", err))
-			return
-		}
-		if r > 100 {
-			r = 100
-		} else if r < 0 {
-			r = 0
-		}
-		gid := ctx.Event.GroupID
-		if gid == 0 {
-			gid = -ctx.Event.UserID
-		}
-		val := c.GetData(gid) & (^0xff00)
-		err = c.SetData(gid, val|(int64(r&0xff)<<8))
-		if err != nil {
-			ctx.SendChain(message.Text("ERROR: set data err: ", err))
-			return
-		}
-		ctx.SendChain(message.Text("成功"))
-	})
-	en.OnPrefix("设置AI聊天接口类型", ensureconfig, zero.OnlyPrivate, zero.SuperUserPermission).SetBlock(true).Handle(func(ctx *zero.Ctx) {
-		args := strings.TrimSpace(ctx.State["args"].(string))
-		if args == "" {
-			ctx.SendChain(message.Text("ERROR: empty args"))
-			return
-		}
-		c, ok := ctx.State["manager"].(*ctrl.Control[*zero.Ctx])
-		if !ok {
-			ctx.SendChain(message.Text("ERROR: no such plugin"))
-			return
-		}
-		typ, ok := apitypes[args]
-		if !ok {
-			ctx.SendChain(message.Text("ERROR: 未知类型 ", args))
-			return
-		}
-		cfg.Type = int(typ)
-		err := c.SetExtra(&cfg)
-		if err != nil {
-			ctx.SendChain(message.Text("ERROR: set extra err: ", err))
-			return
-		}
-		ctx.SendChain(message.Text("成功"))
-	})
-	en.OnPrefix("设置AI聊天接口地址", ensureconfig, zero.OnlyPrivate, zero.SuperUserPermission).SetBlock(true).
-		Handle(newextrasetstr(&cfg.API))
-	en.OnPrefix("设置AI聊天密钥", ensureconfig, zero.OnlyPrivate, zero.SuperUserPermission).SetBlock(true).
-		Handle(newextrasetstr(&cfg.Key))
-	en.OnPrefix("设置AI聊天模型名", ensureconfig, zero.OnlyPrivate, zero.SuperUserPermission).SetBlock(true).
-		Handle(newextrasetstr(&cfg.ModelName))
-	en.OnPrefix("设置AI聊天系统提示词", ensureconfig, zero.OnlyPrivate, zero.SuperUserPermission).SetBlock(true).
-		Handle(newextrasetstr(&cfg.SystemP))
-	en.OnFullMatch("查看AI聊天系统提示词", ensureconfig, zero.OnlyPrivate, zero.SuperUserPermission).SetBlock(true).Handle(func(ctx *zero.Ctx) {
-		ctx.SendChain(message.Text(cfg.SystemP))
-	})
-	en.OnFullMatch("重置AI聊天系统提示词", ensureconfig, zero.OnlyPrivate, zero.SuperUserPermission).SetBlock(true).Handle(func(ctx *zero.Ctx) {
-		c, ok := ctx.State["manager"].(*ctrl.Control[*zero.Ctx])
-		if !ok {
-			ctx.SendChain(message.Text("ERROR: no such plugin"))
-			return
-		}
-		cfg.SystemP = chat.SystemPrompt
-		err := c.SetExtra(&cfg)
-		if err != nil {
-			ctx.SendChain(message.Text("ERROR: set extra err: ", err))
-			return
-		}
-		ctx.SendChain(message.Text("成功"))
-	})
-	en.OnPrefix("设置AI聊天分隔符", ensureconfig, zero.OnlyPrivate, zero.SuperUserPermission).SetBlock(true).
-		Handle(newextrasetstr(&cfg.Separator))
-	en.OnRegex("^设置AI聊天(不)?响应AT$", ensureconfig, zero.OnlyPrivate, zero.SuperUserPermission).SetBlock(true).
-		Handle(newextrasetbool(&cfg.NoReplyAT))
-	en.OnRegex("^设置AI聊天(不)?支持系统提示词$", ensureconfig, zero.OnlyPrivate, zero.SuperUserPermission).SetBlock(true).
-		Handle(newextrasetbool(&cfg.NoSystemP))
-	en.OnPrefix("设置AI聊天最大长度", ensureconfig, zero.OnlyPrivate, zero.SuperUserPermission).SetBlock(true).
-		Handle(newextrasetuint(&cfg.MaxN))
-	en.OnPrefix("设置AI聊天TopP", ensureconfig, zero.OnlyPrivate, zero.SuperUserPermission).SetBlock(true).
-		Handle(newextrasetfloat32(&cfg.TopP))
-	en.OnRegex("^设置AI聊天(不)?以AI语音输出$", ensureconfig, zero.OnlyPrivate, zero.SuperUserPermission).SetBlock(true).
-		Handle(newextrasetbool(&cfg.NoRecord))
-	en.OnFullMatch("查看AI聊天配置", ensureconfig, zero.OnlyPrivate, zero.SuperUserPermission).SetBlock(true).
-		Handle(func(ctx *zero.Ctx) {
-			c, ok := ctx.State["manager"].(*ctrl.Control[*zero.Ctx])
-			if !ok {
-				ctx.SendChain(message.Text("ERROR: no such plugin"))
-				return
-			}
-			gid := ctx.Event.GroupID
-			rate := c.GetData(gid) & 0xff
-			temp := (c.GetData(gid) >> 8) & 0xff
-			if temp <= 0 {
-				temp = 70 // default setting
-			}
-			if temp > 100 {
-				temp = 100
-			}
-			ctx.SendChain(message.Text(printConfig(rate, temp, cfg)))
-		})
 }
