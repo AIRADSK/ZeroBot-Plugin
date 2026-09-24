@@ -1,6 +1,8 @@
 // Package main ZeroBot-Plugin main file
 package main
 
+//go:generate go run github.com/FloatTech/ZeroBot-Plugin/abineundo/ref -r .
+
 import (
 	"encoding/json"
 	"flag"
@@ -68,6 +70,8 @@ import (
 	_ "github.com/AIRADSK/Plugin/tgyj"                               // 同归于尽
 	_ "github.com/FloatTech/ZeroBot-Plugin/custom"                   // 自定义插件合集
 	_ "github.com/FloatTech/ZeroBot-Plugin/plugin/ahsai"             // ahsai tts
+	_ "github.com/FloatTech/ZeroBot-Plugin/plugin/aifalse"           // 服务器监控
+	_ "github.com/FloatTech/ZeroBot-Plugin/plugin/aiimage"           // AI画图
 	_ "github.com/FloatTech/ZeroBot-Plugin/plugin/aiwife"            // 随机老婆
 	_ "github.com/FloatTech/ZeroBot-Plugin/plugin/alipayvoice"       // 支付宝到账语音
 	_ "github.com/FloatTech/ZeroBot-Plugin/plugin/autowithdraw"      // 触发者撤回时也自动撤回
