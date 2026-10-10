@@ -64,14 +64,15 @@ import (
 	//                      vvvvvvv中优先级区vvvvvvv                      //
 	//                          vvvvvvvvvvvvvv                          //
 	//                               vvvv                               //
-	_ "github.com/AIRADSK/Plugin/ghrepo"                             // github仓库信息
-	_ "github.com/AIRADSK/Plugin/givemoney"                          // 给予ATRI币
-	_ "github.com/AIRADSK/Plugin/partygame"                          // 派对游戏轮盘赌
-	_ "github.com/AIRADSK/Plugin/tgyj"                               // 同归于尽
-	_ "github.com/FloatTech/ZeroBot-Plugin/custom"                   // 自定义插件合集
-	_ "github.com/FloatTech/ZeroBot-Plugin/plugin/ahsai"             // ahsai tts
-	_ "github.com/FloatTech/ZeroBot-Plugin/plugin/aifalse"           // 服务器监控
-	_ "github.com/FloatTech/ZeroBot-Plugin/plugin/aiimage"           // AI画图
+	//_ "github.com/AIRADSK/Plugin/ghrepo"    // github仓库信息
+	//_ "github.com/AIRADSK/Plugin/givemoney" // 给予ATRI币
+	//_ "github.com/AIRADSK/Plugin/partygame" // 派对游戏轮盘赌
+	//_ "github.com/AIRADSK/Plugin/tgyj"                               // 同归于尽
+	_ "github.com/FloatTech/ZeroBot-Plugin/custom"         // 自定义插件合集
+	_ "github.com/FloatTech/ZeroBot-Plugin/plugin/ahsai"   // ahsai tts
+	_ "github.com/FloatTech/ZeroBot-Plugin/plugin/aifalse" // 服务器监控
+
+	//_ "github.com/FloatTech/ZeroBot-Plugin/plugin/aiimage"           // AI画图
 	_ "github.com/FloatTech/ZeroBot-Plugin/plugin/aiwife"            // 随机老婆
 	_ "github.com/FloatTech/ZeroBot-Plugin/plugin/alipayvoice"       // 支付宝到账语音
 	_ "github.com/FloatTech/ZeroBot-Plugin/plugin/autowithdraw"      // 触发者撤回时也自动撤回
@@ -306,7 +307,7 @@ func init() {
 	}
 	config.W = []*driver.WSClient{driver.NewWebSocketClient(*url, *token)}
 	config.Z = zero.Config{
-		NickName:       append([]string{*adana}, "枫叶", "亚托莉", "アトリ"),
+		NickName:       append([]string{*adana}, "枫叶"),
 		CommandPrefix:  *prefix,
 		SuperUsers:     sus,
 		RingLen:        *rsz,
